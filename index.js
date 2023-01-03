@@ -2,7 +2,6 @@ const express = require("express");
 
 const cheerio = require("cheerio");
 const request = require("request-promise");
-const fs = require("fs");
 const crypto = require("crypto");
 const ics = require("ics");
 const moment = require("moment");
@@ -95,7 +94,6 @@ const monthShortToNum = (month) => {
     september: "September",
     oct: "October",
     october: "October",
-
     nov: "November",
     november: "November",
     dec: "December",
@@ -135,9 +133,15 @@ app.get("/", async (req, res) => {
       endDate = moment(startDate).add(1, "hours").format();
     }
 
-    // date format [2018, 1, 15, 12, 15] from October 28, 2022 - 1:14:10 UTC
-    startDate = moment(startDate).format("YYYY, MM, DD, HH, mm").split(", ");
-    endDate = moment(endDate).format("YYYY, MM, DD, HH, mm").split(", ");
+    // date format [2018, 1, 15, 12, 15] from June 21, 2023 00:00:00 UTC
+    // June 21, 2023 00:00:00 UTC  (MMM DD, YYYY HH:mm:ss UTC
+    startDate = moment(startDate, "MMM DD, YYYY HH:mm:ss UTC")
+      .format("YYYY, MM, DD, HH, mm")
+      .split(", ");
+
+    endDate = moment(endDate, "MMM DD, YYYY HH:mm:ss UTC")
+      .format("YYYY, MM, DD, HH, mm")
+      .split(", ");
     startDate = startDate.map((item) => parseInt(item));
     endDate = endDate.map((item) => parseInt(item));
     return {
@@ -152,17 +156,54 @@ app.get("/", async (req, res) => {
 
   const { error, value } = ics.createEvents(icsEvents);
   if (error) {
-    console.log(error);
+    console.error(error);
     res.status(500).send(error);
     return;
   }
-  res.setHeader('content-type', 'text/calendar');
+  res.setHeader("content-type", "text/calendar");
 
   res.send(value);
 });
 
 
+app.get("/json", async (req, res) => {
+  const spaceEvents = await getSpaceEvents();
+  const astronomyEvents = await getAstronomyEvents();
+  const events = [...spaceEvents, ...astronomyEvents];
+  const icsEvents = events.map((event) => {
+    let date = event.date.split(" - ");
+    let startDate = date[0];
+    let endDate = date[1] || date[0];
+
+    if (!endDate) {
+      endDate = moment(startDate).add(1, "hours").format();
+    }
+
+    // date format [2018, 1, 15, 12, 15] from June 21, 2023 00:00:00 UTC
+    // June 21, 2023 00:00:00 UTC  (MMM DD, YYYY HH:mm:ss UTC
+    startDate = moment(startDate, "MMM DD, YYYY HH:mm:ss UTC")
+      .format("YYYY, MM, DD, HH, mm")
+      .split(", ");
+
+    endDate = moment(endDate, "MMM DD, YYYY HH:mm:ss UTC")
+      .format("YYYY, MM, DD, HH, mm")
+      .split(", ");
+    startDate = startDate.map((item) => parseInt(item));
+    endDate = endDate.map((item) => parseInt(item));
+    return {
+      title: event.title,
+      start: startDate,
+      end: endDate,
+      description: event.description,
+      url: event.link,
+      uid: event.uuid
+    };
+  });
+  res.send(icsEvents);
+});
+
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-    console.log(`Server listening on port ${PORT}`);
+  console.log(`Server listening on port ${PORT}`);
 });
