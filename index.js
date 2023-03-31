@@ -5,6 +5,7 @@ const request = require("request-promise");
 const crypto = require("crypto");
 const ics = require("ics");
 const moment = require("moment");
+const fs = require("fs");
 
 const app = express();
 const getSpaceEvents = async () => {
@@ -165,7 +166,6 @@ app.get("/", async (req, res) => {
   res.send(value);
 });
 
-
 app.get("/json", async (req, res) => {
   const spaceEvents = await getSpaceEvents();
   const astronomyEvents = await getAstronomyEvents();
@@ -202,6 +202,32 @@ app.get("/json", async (req, res) => {
   res.send(icsEvents);
 });
 
+app.get("/ipl", async (req, res) => {
+  const iplData = fs.readFileSync("ipl.json");
+  const iplEvents = JSON.parse(iplData);
+  const icsEvents = iplEvents.map((event) => {
+    let date = event.date; //Mar 31, Fri
+    let time = event.time; // 11:00 AM
+    let startDate = `${date} ${time}`;
+    let endDate = moment(startDate, "MMM DD, ddd hh:mm A").add(3, "hours");
+    startDate = moment(startDate, "MMM DD, ddd hh:mm A").format("YYYY, MM, DD, HH, mm").split(", ");
+    endDate = endDate.format("YYYY, MM, DD, HH, mm").split(", ");
+    startDate = startDate.map((item) => parseInt(item));
+    endDate = endDate.map((item) => parseInt(item));
+
+    return {
+      title: event.text,
+      start: startDate,
+      end: endDate,
+      location: event.location
+    };
+  });
+  const { error, value } = ics.createEvents(icsEvents);
+  if (error) {
+  }
+  res.setHeader("content-type", "text/calendar");
+  res.send(value);
+});
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
