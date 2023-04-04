@@ -210,7 +210,7 @@ app.get("/ipl", async (req, res) => {
     let time = event.time; // 11:00 AM
     let startDate = `${date} ${time}`;
     // minus 1 hour from start date
-    startDate = moment(startDate, "MMM DD, ddd hh:mm A").subtract(1, "hours");
+    startDate = moment(startDate, "MMM DD, ddd hh:mm A").subtract(2, "hours");
     
     let endDate = moment(startDate, "MMM DD, ddd hh:mm A").add(3, "hours");
     startDate = moment(startDate, "MMM DD, ddd hh:mm A").format("YYYY, MM, DD, HH, mm").split(", ");
